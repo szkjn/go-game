@@ -20,13 +20,34 @@ type Vector struct {
 }
 
 type Game struct {
-	playerPosition Vector
-	attackTimer    *Timer
+	player *Player
 }
 
 type Timer struct {
 	currentTicks int
 	targetTicks  int
+}
+
+type Player struct {
+	position Vector
+	sprite   *ebiten.Image
+}
+
+func NewPlayer() *Player {
+	return &Player{
+		position: Vector{X: 100, Y: 100},
+		sprite:   PlayerSprite,
+	}
+}
+
+func (p *Player) Update() {
+
+}
+
+func (p *Player) Draw(screen *ebiten.Image) {
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(p.position.X, p.position.Y)
+	screen.DrawImage(p.sprite, op)
 }
 
 func NewTimer(d time.Duration) *Timer {
@@ -51,41 +72,11 @@ func (t *Timer) Reset() {
 }
 
 func (g *Game) Update() error {
-	speed := float64(300 / ebiten.TPS())
-
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.playerPosition.Y += speed
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.playerPosition.Y -= speed
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.playerPosition.X -= speed
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.playerPosition.X += speed
-	}
-
-	return nil
+	g.player.Update()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	// width := PlayerSprite.Bounds().Dx()
-	// height := PlayerSprite.Bounds().Dy()
-	// halfW := float64(width / 2)
-	// halfH := float64(height / 2)
-
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(g.playerPosition.X, g.playerPosition.Y)
-	// op.GeoM.Translate(-halfW, -halfH)
-	// op.GeoM.Rotate(45.0 * math.Pi / 180.0)
-	// op.GeoM.Translate(halfW, halfH)
-	screen.DrawImage(PlayerSprite, op)
-
-	// op := &colorm.DrawImageOptions{}
-	// cm := colorm.ColorM{}
-	// cm.Scale(1.0, 1.0, 1.0, 0.5)
-	// colorm.DrawImage(screen, PlayerSprite, cm, op)
+	g.player.Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
