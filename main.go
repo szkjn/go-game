@@ -4,6 +4,7 @@ import (
 	"embed"
 	"image"
 	_ "image/png"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -20,6 +21,33 @@ type Vector struct {
 
 type Game struct {
 	playerPosition Vector
+	attackTimer    *Timer
+}
+
+type Timer struct {
+	currentTicks int
+	targetTicks  int
+}
+
+func NewTimer(d time.Duration) *Timer {
+	return &Timer{
+		currentTicks: 0,
+		targetTicks:  int(d.Milliseconds()) * ebiten.TPS() / 1000,
+	}
+}
+
+func (t *Timer) Update() {
+	if t.currentTicks < t.targetTicks {
+		t.currentTicks++
+	}
+}
+
+func (t *Timer) IsReady() bool {
+	return t.currentTicks >= t.targetTicks
+}
+
+func (t *Timer) Reset() {
+	t.currentTicks = 0
 }
 
 func (g *Game) Update() error {
@@ -82,6 +110,7 @@ func mustLoadImage(name string) *ebiten.Image {
 func main() {
 	g := &Game{
 		playerPosition: Vector{X: 100, Y: 100},
+		attackTimer:    NewTimer(5 * time.Second),
 	}
 
 	err := ebiten.RunGame(g)
