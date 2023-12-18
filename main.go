@@ -93,14 +93,11 @@ func (t *Timer) Reset() {
 
 func (g *Game) Update() error {
 	g.player.Update()
+	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.player.Draw(screen)
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return outsideWidth, outsideHeight
 }
 
 func mustLoadImage(name string) *ebiten.Image {
@@ -120,8 +117,7 @@ func mustLoadImage(name string) *ebiten.Image {
 
 func main() {
 	g := &Game{
-		playerPosition: Vector{X: 100, Y: 100},
-		attackTimer:    NewTimer(5 * time.Second),
+		player: NewPlayer(),
 	}
 
 	err := ebiten.RunGame(g)
