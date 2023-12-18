@@ -14,6 +14,15 @@ var assets embed.FS
 
 var PlayerSprite = mustLoadImage("assets/player.png")
 
+const (
+	ScreenWidth  = 800
+	screenHeight = 600
+)
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return ScreenWidth, screenHeight
+}
+
 type Vector struct {
 	X float64
 	Y float64
