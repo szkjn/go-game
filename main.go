@@ -10,32 +10,37 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// ------------------------------------------------------
+// GLOBAL
+// ------------------------------------------------------
+
 //go:embed assets/*
 var assets embed.FS
 
-var PlayerSprite = mustLoadImage("assets/player.png")
+func mustLoadImage(name string) *ebiten.Image {
+	f, err := assets.Open(name)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
 
-const (
-	ScreenWidth  = 800
-	screenHeight = 600
-)
+	img, _, err := image.Decode(f)
+	if err != nil {
+		panic(err)
+	}
 
-func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return ScreenWidth, screenHeight
+	return ebiten.NewImageFromImage(img)
 }
+
+// ------------------------------------------------------
+// PLAYER
+// ------------------------------------------------------
+
+var PlayerSprite = mustLoadImage("assets/player.png")
 
 type Vector struct {
 	X float64
 	Y float64
-}
-
-type Game struct {
-	player *Player
-}
-
-type Timer struct {
-	currentTicks int
-	targetTicks  int
 }
 
 type Player struct {
@@ -53,7 +58,7 @@ func NewPlayer() *Player {
 
 	pos := Vector{
 		X: ScreenWidth/2 - halfW,
-		Y: screenHeight/2 - halfH,
+		Y: ScreenHeight/2 - halfH,
 	}
 
 	return &Player{
@@ -88,6 +93,41 @@ func (p *Player) Draw(screen *ebiten.Image) {
 	screen.DrawImage(p.sprite, op)
 }
 
+// ------------------------------------------------------
+// GAME
+// ------------------------------------------------------
+
+const (
+	ScreenWidth  = 800
+	ScreenHeight = 600
+)
+
+type Game struct {
+	player *Player
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return ScreenWidth, ScreenHeight
+}
+
+func (g *Game) Update() error {
+	g.player.Update()
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.player.Draw(screen)
+}
+
+// ------------------------------------------------------
+// TIMER
+// ------------------------------------------------------
+
+type Timer struct {
+	currentTicks int
+	targetTicks  int
+}
+
 func NewTimer(d time.Duration) *Timer {
 	return &Timer{
 		currentTicks: 0,
@@ -109,29 +149,9 @@ func (t *Timer) Reset() {
 	t.currentTicks = 0
 }
 
-func (g *Game) Update() error {
-	g.player.Update()
-	return nil
-}
-
-func (g *Game) Draw(screen *ebiten.Image) {
-	g.player.Draw(screen)
-}
-
-func mustLoadImage(name string) *ebiten.Image {
-	f, err := assets.Open(name)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	img, _, err := image.Decode(f)
-	if err != nil {
-		panic(err)
-	}
-
-	return ebiten.NewImageFromImage(img)
-}
+// ------------------------------------------------------
+// MAIN
+// ------------------------------------------------------
 
 func main() {
 	g := &Game{
