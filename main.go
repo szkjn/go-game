@@ -5,6 +5,8 @@ import (
 	"image"
 	_ "image/png"
 	"math"
+	"math/rand"
+	"path/filepath"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -30,6 +32,60 @@ func mustLoadImage(name string) *ebiten.Image {
 	}
 
 	return ebiten.NewImageFromImage(img)
+}
+
+func mustLoadImages(pattern string) []*ebiten.Image {
+	files, err := assets.ReadDir(".")
+	if err != nil {
+		panic(err)
+	}
+
+	var images []*ebiten.Image
+	for _, file := range files {
+		match, _ := filepath.Match(pattern, file.Name())
+		if match {
+			f, err := assets.Open(file.Name())
+			if err != nil {
+				panic(err)
+			}
+			defer f.Close()
+
+			img, _, err := image.Decode(f)
+			if err != nil {
+				panic(err)
+			}
+
+			images = append(images, ebiten.NewImageFromImage(img))
+		}
+	}
+	return images
+}
+
+// ------------------------------------------------------
+// METEOR
+// ------------------------------------------------------
+var MeteorSprites = mustLoadImages("assets/meteors/*.png")
+
+type Meteor struct {
+	position Vector
+	sprite   *ebiten.Image
+}
+
+func NewMeteor() *Meteor {
+	sprite := MeteorSprites[rand.Intn(len(MeteorSprites))]
+
+	return &Meteor{
+		position: Vector{},
+		sprite:   sprite,
+	}
+}
+
+func (m *Meteor) Update() {
+
+}
+
+func (m *Meteor) Draw(screen *ebiten.Image) {
+
 }
 
 // ------------------------------------------------------
@@ -103,7 +159,9 @@ const (
 )
 
 type Game struct {
-	player *Player
+	player           *Player
+	meteorSpawnTimer *Timer
+	meteors          []*Meteor
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -112,11 +170,28 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func (g *Game) Update() error {
 	g.player.Update()
+
+	g.meteorSpawnTimer.Update()
+	if g.meteorSpawnTimer.IsReady() {
+		g.meteorSpawnTimer.Reset()
+
+		m := NewMeteor()
+		g.meteors = append(g.meteors, m)
+	}
+
+	for _, m := range g.meteors {
+		m.Update()
+	}
+
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.player.Draw(screen)
+
+	for _, m := range g.meteors {
+		m.Draw(screen)
+	}
 }
 
 // ------------------------------------------------------
