@@ -4,9 +4,9 @@ import (
 	"embed"
 	"image"
 	_ "image/png"
+	"io/fs"
 	"math"
 	"math/rand"
-	"path/filepath"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -34,58 +34,113 @@ func mustLoadImage(name string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-func mustLoadImages(pattern string) []*ebiten.Image {
-	files, err := assets.ReadDir(".")
+func mustLoadImages(path string) []*ebiten.Image {
+	matches, err := fs.Glob(assets, path)
 	if err != nil {
 		panic(err)
 	}
 
-	var images []*ebiten.Image
-	for _, file := range files {
-		match, _ := filepath.Match(pattern, file.Name())
-		if match {
-			f, err := assets.Open(file.Name())
-			if err != nil {
-				panic(err)
-			}
-			defer f.Close()
-
-			img, _, err := image.Decode(f)
-			if err != nil {
-				panic(err)
-			}
-
-			images = append(images, ebiten.NewImageFromImage(img))
-		}
+	images := make([]*ebiten.Image, len(matches))
+	for i, match := range matches {
+		images[i] = mustLoadImage(match)
 	}
+
 	return images
+}
+
+// ------------------------------------------------------
+// VECTOR
+// ------------------------------------------------------
+
+type Vector struct {
+	X float64
+	Y float64
+}
+
+func (v Vector) Normalize() Vector {
+	magnitude := math.Sqrt(v.X*v.X + v.Y*v.Y)
+	return Vector{v.X / magnitude, v.Y / magnitude}
 }
 
 // ------------------------------------------------------
 // METEOR
 // ------------------------------------------------------
+const (
+	rotationSpeedMin = -0.02
+	rotationSpeedMax = 0.02
+)
+
 var MeteorSprites = mustLoadImages("assets/meteors/*.png")
 
 type Meteor struct {
-	position Vector
-	sprite   *ebiten.Image
+	position      Vector
+	movement      Vector
+	rotation      float64
+	rotationSpeed float64
+	sprite        *ebiten.Image
 }
 
 func NewMeteor() *Meteor {
+	target := Vector{
+		X: ScreenWidth / 2,
+		Y: ScreenHeight / 2,
+	}
+
+	r := ScreenWidth / 2.0
+	angle := rand.Float64() * 2 * math.Pi
+
+	pos := Vector{
+		X: target.X + math.Cos(angle)*r,
+		Y: target.Y + math.Sin(angle)*r,
+	}
+
+	velocity := 0.25 + rand.Float64()*1.5
+	rotationSpeed := rotationSpeedMin + rand.Float64()*(rotationSpeedMax-rotationSpeedMin)
+
+	direction := Vector{
+		X: target.X - pos.X,
+		Y: target.Y - pos.Y,
+	}
+
+	normalizedDirection := direction.Normalize()
+
+	movement := Vector{
+		X: normalizedDirection.X * velocity,
+		Y: normalizedDirection.Y * velocity,
+	}
+
+	if len(MeteorSprites) == 0 {
+		panic("no meteor sprites loaded")
+	}
 	sprite := MeteorSprites[rand.Intn(len(MeteorSprites))]
 
 	return &Meteor{
-		position: Vector{},
+		position: pos,
+		movement: movement,
+		rotation: rotationSpeed,
 		sprite:   sprite,
 	}
 }
 
 func (m *Meteor) Update() {
-
+	m.position.X += m.movement.X
+	m.position.Y += m.movement.Y
+	m.rotation += m.rotationSpeed
 }
 
 func (m *Meteor) Draw(screen *ebiten.Image) {
+	bounds := m.sprite.Bounds()
+	halfW := float64(bounds.Dx()) / 2
+	halfH := float64(bounds.Dy()) / 2
 
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(-halfW, -halfH)
+	// op.GeoM.Rotate(m.rotation)
+	op.GeoM.Translate(halfW, halfH)
+
+	op.GeoM.Translate(m.position.X, m.position.Y)
+
+	screen.DrawImage(m.sprite, op)
 }
 
 // ------------------------------------------------------
@@ -93,11 +148,6 @@ func (m *Meteor) Draw(screen *ebiten.Image) {
 // ------------------------------------------------------
 
 var PlayerSprite = mustLoadImage("assets/player.png")
-
-type Vector struct {
-	X float64
-	Y float64
-}
 
 type Player struct {
 	position Vector
@@ -230,7 +280,8 @@ func (t *Timer) Reset() {
 
 func main() {
 	g := &Game{
-		player: NewPlayer(),
+		player:           NewPlayer(),
+		meteorSpawnTimer: NewTimer(20),
 	}
 
 	err := ebiten.RunGame(g)
