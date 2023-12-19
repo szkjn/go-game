@@ -2,9 +2,7 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"image"
-	"image/color"
 	_ "image/png"
 	"io/fs"
 	"math"
@@ -12,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
@@ -75,86 +72,6 @@ func mustLoadFont(name string) font.Face {
 		panic(err)
 	}
 	return face
-}
-
-// ------------------------------------------------------
-// VECTOR
-// ------------------------------------------------------
-
-type Vector struct {
-	X float64
-	Y float64
-}
-
-func (v Vector) Normalize() Vector {
-	magnitude := math.Sqrt(v.X*v.X + v.Y*v.Y)
-	return Vector{v.X / magnitude, v.Y / magnitude}
-}
-
-// ------------------------------------------------------
-// BULLET
-// ------------------------------------------------------
-const (
-	bulletSpeedPerSecond = 350.0
-)
-
-var LaserSprite = mustLoadImage("assets/laser.png")
-
-type Bullet struct {
-	position Vector
-	rotation float64
-	sprite   *ebiten.Image
-}
-
-func NewBullet(pos Vector, rotation float64) *Bullet {
-	sprite := LaserSprite
-
-	bounds := sprite.Bounds()
-	halfW := float64(bounds.Dx()) / 2
-	halfH := float64(bounds.Dy()) / 2
-
-	pos.X -= halfW
-	pos.Y -= halfH
-	b := &Bullet{
-		position: pos,
-		rotation: rotation,
-		sprite:   sprite,
-	}
-
-	return b
-}
-
-func (b *Bullet) Update() {
-	speed := bulletSpeedPerSecond / float64(ebiten.TPS())
-
-	b.position.X += math.Sin(b.rotation) * speed
-	b.position.Y += math.Cos(b.rotation) * -speed
-}
-
-func (b *Bullet) Draw(screen *ebiten.Image) {
-	bounds := b.sprite.Bounds()
-	halfW := float64(bounds.Dx()) / 2
-	halfH := float64(bounds.Dy()) / 2
-
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(-halfW, -halfH)
-	op.GeoM.Rotate(b.rotation)
-	op.GeoM.Translate(halfW, halfH)
-
-	op.GeoM.Translate(b.position.X, b.position.Y)
-
-	screen.DrawImage(b.sprite, op)
-}
-
-func (b *Bullet) Collider() Rect {
-	bounds := b.sprite.Bounds()
-
-	return NewRect(
-		b.position.X,
-		b.position.Y,
-		float64(bounds.Dx()),
-		float64(bounds.Dy()),
-	)
 }
 
 // ------------------------------------------------------
@@ -248,41 +165,6 @@ func (m *Meteor) Collider() Rect {
 		float64(bounds.Dy()),
 	)
 }
-
-
-
-// ------------------------------------------------------
-// RECT
-// ------------------------------------------------------
-type Rect struct {
-	X      float64
-	Y      float64
-	Width  float64
-	Height float64
-}
-
-func NewRect(x, y, width, height float64) Rect {
-	return Rect{
-		X:      x,
-		Y:      y,
-		Width:  width,
-		Height: height,
-	}
-}
-
-func (r Rect) MaxX() float64 {
-	return r.X + r.Width
-}
-
-func (r Rect) MaxY() float64 {
-	return r.Y + r.Height
-}
-
-func (r Rect) Intersects(other Rect) bool {
-	return r.X <= other.MaxX() && other.X <= r.MaxX() && r.Y <= other.MaxY() && other.Y <= r.MaxY()
-}
-
-
 
 // ------------------------------------------------------
 // TIMER
