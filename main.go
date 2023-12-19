@@ -63,6 +63,61 @@ func (v Vector) Normalize() Vector {
 }
 
 // ------------------------------------------------------
+// BULLET
+// ------------------------------------------------------
+const (
+	bulletSpeedPerSecond = 350.0
+)
+
+var LaserSprite = mustLoadImage("assets/laser.png")
+
+type Bullet struct {
+	position Vector
+	rotation float64
+	sprite   *ebiten.Image
+}
+
+func NewBullet(pos Vector, rotation float64) *Bullet {
+	sprite := LaserSprite
+
+	bounds := sprite.Bounds()
+	halfW := float64(bounds.Dx()) / 2
+	halfH := float64(bounds.Dy()) / 2
+
+	pos.X -= halfW
+	pos.Y -= halfH
+	b := &Bullet{
+		position: pos,
+		rotation: rotation,
+		sprite:   sprite,
+	}
+
+	return b
+}
+
+func (b *Bullet) Update() {
+	speed := bulletSpeedPerSecond / float64(ebiten.TPS())
+
+	b.position.X += math.Sin(b.rotation) * speed
+	b.position.Y += math.Cos(b.rotation) * -speed
+}
+
+func (b *Bullet) Draw(screen *ebiten.Image) {
+	bounds := b.sprite.Bounds()
+	halfW := float64(bounds.Dx()) / 2
+	halfH := float64(bounds.Dy()) / 2
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(-halfW, -halfH)
+	op.GeoM.Rotate(b.rotation)
+	op.GeoM.Translate(halfW, halfH)
+
+	op.GeoM.Translate(b.position.X, b.position.Y)
+
+	screen.DrawImage(b.sprite, op)
+}
+
+// ------------------------------------------------------
 // METEOR
 // ------------------------------------------------------
 const (
@@ -149,13 +204,21 @@ func (m *Meteor) Draw(screen *ebiten.Image) {
 
 var PlayerSprite = mustLoadImage("assets/player.png")
 
+const (
+	shootCooldown     = time.Millisecond * 500
+	rotationPerSecond = math.Pi
+	bulletSpawnOffset = 50.0
+)
+
 type Player struct {
-	position Vector
-	sprite   *ebiten.Image
-	rotation float64
+	game          *Game
+	position      Vector
+	rotation      float64
+	sprite        *ebiten.Image
+	shootCooldown *Timer
 }
 
-func NewPlayer() *Player {
+func NewPlayer(game *Game) *Player {
 	sprite := PlayerSprite
 
 	bounds := sprite.Bounds()
@@ -168,8 +231,11 @@ func NewPlayer() *Player {
 	}
 
 	return &Player{
-		position: pos,
-		sprite:   sprite,
+		game:          game,
+		position:      pos,
+		rotation:      0,
+		sprite:        sprite,
+		shootCooldown: NewTimer(shootCooldown),
 	}
 }
 
@@ -181,6 +247,23 @@ func (p *Player) Update() {
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		p.rotation += speed
+	}
+
+	p.shootCooldown.Update()
+	if p.shootCooldown.IsReady() && ebiten.IsKeyPressed(ebiten.KeySpace) {
+		p.shootCooldown.Reset()
+
+		bounds := p.sprite.Bounds()
+		halfW := float64(bounds.Dx()) / 2
+		halfH := float64(bounds.Dy()) / 2
+
+		spawnPos := Vector{
+			p.position.X + halfW + math.Sin(p.rotation)*bulletSpawnOffset,
+			p.position.Y + halfH + math.Cos(p.rotation)*bulletSpawnOffset,
+		}
+
+		bullet := NewBullet(spawnPos, p.rotation)
+		p.game.AddBullet(bullet)
 	}
 }
 
@@ -212,10 +295,7 @@ type Game struct {
 	player           *Player
 	meteorSpawnTimer *Timer
 	meteors          []*Meteor
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return ScreenWidth, ScreenHeight
+	bullets          []*Bullet
 }
 
 func (g *Game) Update() error {
@@ -233,6 +313,10 @@ func (g *Game) Update() error {
 		m.Update()
 	}
 
+	for _, b := range g.bullets {
+		b.Update()
+	}
+
 	return nil
 }
 
@@ -242,6 +326,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, m := range g.meteors {
 		m.Draw(screen)
 	}
+
+	for _, b := range g.bullets {
+		b.Draw(screen)
+	}
+}
+
+func (g *Game) AddBullet(b *Bullet) {
+	g.bullets = append(g.bullets, b)
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return ScreenWidth, ScreenHeight
 }
 
 // ------------------------------------------------------
@@ -280,9 +376,10 @@ func (t *Timer) Reset() {
 
 func main() {
 	g := &Game{
-		player:           NewPlayer(),
 		meteorSpawnTimer: NewTimer(20),
 	}
+
+	g.player = NewPlayer(g)
 
 	err := ebiten.RunGame(g)
 	if err != nil {
