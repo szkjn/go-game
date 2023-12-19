@@ -117,6 +117,17 @@ func (b *Bullet) Draw(screen *ebiten.Image) {
 	screen.DrawImage(b.sprite, op)
 }
 
+func (b *Bullet) Collider() Rect {
+	bounds := b.sprite.Bounds()
+
+	return NewRect(
+		b.position.X,
+		b.position.Y,
+		float64(bounds.Dx()),
+		float64(bounds.Dy()),
+	)
+}
+
 // ------------------------------------------------------
 // METEOR
 // ------------------------------------------------------
@@ -196,6 +207,17 @@ func (m *Meteor) Draw(screen *ebiten.Image) {
 	op.GeoM.Translate(m.position.X, m.position.Y)
 
 	screen.DrawImage(m.sprite, op)
+}
+
+func (m *Meteor) Collider() Rect {
+	bounds := m.sprite.Bounds()
+
+	return NewRect(
+		m.position.X,
+		m.position.Y,
+		float64(bounds.Dx()),
+		float64(bounds.Dy()),
+	)
 }
 
 // ------------------------------------------------------
@@ -282,6 +304,48 @@ func (p *Player) Draw(screen *ebiten.Image) {
 	screen.DrawImage(p.sprite, op)
 }
 
+func (p *Player) Collider() Rect {
+	bounds := p.sprite.Bounds()
+
+	return NewRect(
+		p.position.X,
+		p.position.Y,
+		float64(bounds.Dx()),
+		float64(bounds.Dy()),
+	)
+}
+
+// ------------------------------------------------------
+// RECT
+// ------------------------------------------------------
+type Rect struct {
+	X      float64
+	Y      float64
+	Width  float64
+	Height float64
+}
+
+func NewRect(x, y, width, height float64) Rect {
+	return Rect{
+		X:      x,
+		Y:      y,
+		Width:  width,
+		Height: height,
+	}
+}
+
+func (r Rect) MaxX() float64 {
+	return r.X + r.Width
+}
+
+func (r Rect) MaxY() float64 {
+	return r.Y + r.Height
+}
+
+func (r Rect) Intersects(other Rect) bool {
+	return r.X <= other.MaxX() && other.X <= r.MaxX() && r.Y <= other.MaxY() && other.Y <= r.MaxY()
+}
+
 // ------------------------------------------------------
 // GAME
 // ------------------------------------------------------
@@ -317,6 +381,22 @@ func (g *Game) Update() error {
 		b.Update()
 	}
 
+	for i, m := range g.meteors {
+		for j, b := range g.bullets {
+			if m.Collider().Intersects(b.Collider()) {
+				g.meteors = append(g.meteors[:i], g.meteors[i+1:]...)
+				g.bullets = append(g.bullets[:j], g.bullets[j+1:]...)
+			}
+		}
+	}
+
+	for _, m := range g.meteors {
+		if m.Collider().Intersects(g.player.Collider()) {
+			g.Reset()
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -334,6 +414,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 func (g *Game) AddBullet(b *Bullet) {
 	g.bullets = append(g.bullets, b)
+}
+func (g *Game) Reset() {
+	g.player = NewPlayer(g)
+	g.meteors = nil
+	g.bullets = nil
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
