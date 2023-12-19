@@ -10,8 +10,6 @@ const (
 	bulletSpeedPerSecond = 350.0
 )
 
-var LaserSprite = mustLoadImage("assets/laser.png")
-
 type Bullet struct {
 	position Vector
 	rotation float64

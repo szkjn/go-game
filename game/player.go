@@ -7,8 +7,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-var PlayerSprite = mustLoadImage("assets/player.png")
-
 const (
 	shootCooldown     = time.Millisecond * 100
 	rotationPerSecond = math.Pi
