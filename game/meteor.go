@@ -1,6 +1,7 @@
 package game
 
 import (
+	"game/assets"
 	"math"
 	"math/rand"
 
@@ -49,10 +50,10 @@ func NewMeteor() *Meteor {
 		Y: normalizedDirection.Y * velocity,
 	}
 
-	if len(MeteorSprites) == 0 {
+	if len(assets.MeteorSprites) == 0 {
 		panic("no meteor sprites loaded")
 	}
-	sprite := MeteorSprites[rand.Intn(len(MeteorSprites))]
+	sprite := assets.MeteorSprites[rand.Intn(len(assets.MeteorSprites))]
 
 	return &Meteor{
 		position: pos,

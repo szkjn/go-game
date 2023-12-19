@@ -13,10 +13,10 @@ import (
 //go:embed *
 var assets embed.FS
 
-var PlayerSprite = mustLoadImage("assets/player.png")
-var MeteorSprites = mustLoadImages("assets/meteors/*.png")
-var LaserSprite = mustLoadImage("assets/laser.png")
-var ScoreFont = mustLoadFont("assets/font.ttf")
+var PlayerSprite = mustLoadImage("player.png")
+var MeteorSprites = mustLoadImages("meteors/*.png")
+var LaserSprite = mustLoadImage("laser.png")
+var ScoreFont = mustLoadFont("font.ttf")
 
 func mustLoadImage(name string) *ebiten.Image {
 	f, err := assets.Open(name)

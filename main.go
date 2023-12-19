@@ -1,6 +1,7 @@
 package main
 
 import (
+	"game/game"
 	_ "image/png"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -11,7 +12,7 @@ import (
 // ------------------------------------------------------
 
 func main() {
-	g := NewGame()
+	g := game.NewGame()
 
 	err := ebiten.RunGame(g)
 	if err != nil {

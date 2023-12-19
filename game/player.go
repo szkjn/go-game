@@ -1,6 +1,7 @@
 package game
 
 import (
+	"game/assets"
 	"math"
 	"time"
 
@@ -22,7 +23,7 @@ type Player struct {
 }
 
 func NewPlayer(game *Game) *Player {
-	sprite := PlayerSprite
+	sprite := assets.PlayerSprite
 
 	bounds := sprite.Bounds()
 	halfW := float64(bounds.Dx()) / 2

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"game/assets"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -17,7 +18,7 @@ type Bullet struct {
 }
 
 func NewBullet(pos Vector, rotation float64) *Bullet {
-	sprite := LaserSprite
+	sprite := assets.LaserSprite
 
 	bounds := sprite.Bounds()
 	halfW := float64(bounds.Dx()) / 2

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"game/assets"
 	"image/color"
 	"time"
 
@@ -85,7 +86,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	g.player.Draw(screen)
 
-	text.Draw(screen, fmt.Sprintf("%06d", g.score), ScoreFont, ScreenWidth/2-100, 50, color.White)
+	text.Draw(screen, fmt.Sprintf("%06d", g.score), assets.ScoreFont, ScreenWidth/2-100, 50, color.White)
 }
 
 func (g *Game) AddBullet(b *Bullet) {
