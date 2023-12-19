@@ -2,14 +2,19 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"image"
+	"image/color"
 	_ "image/png"
 	"io/fs"
 	"math"
 	"math/rand"
 	"time"
 
+	"github.com/hajimehoshi/ebiten/text"
 	"github.com/hajimehoshi/ebiten/v2"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
 )
 
 // ------------------------------------------------------
@@ -46,6 +51,30 @@ func mustLoadImages(path string) []*ebiten.Image {
 	}
 
 	return images
+}
+
+var ScoreFont = mustLoadFont("assets/font.ttf")
+
+func mustLoadFont(name string) font.Face {
+	f, err := assets.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+
+	tt, err := opentype.Parse(f)
+	if err != nil {
+		panic(err)
+	}
+
+	face, err := opentype.NewFace(tt, &opentype.FaceOptions{
+		Size:    48,
+		DPI:     72,
+		Hinting: font.HintingVertical,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return face
 }
 
 // ------------------------------------------------------
@@ -227,7 +256,7 @@ func (m *Meteor) Collider() Rect {
 var PlayerSprite = mustLoadImage("assets/player.png")
 
 const (
-	shootCooldown     = time.Millisecond * 500
+	shootCooldown     = time.Millisecond * 100
 	rotationPerSecond = math.Pi
 	bulletSpawnOffset = 50.0
 )
@@ -353,6 +382,8 @@ func (r Rect) Intersects(other Rect) bool {
 const (
 	ScreenWidth  = 800
 	ScreenHeight = 600
+
+	meteorSpawnTime = 1 * time.Second
 )
 
 type Game struct {
@@ -360,6 +391,17 @@ type Game struct {
 	meteorSpawnTimer *Timer
 	meteors          []*Meteor
 	bullets          []*Bullet
+	score            int
+}
+
+func NewGame() *Game {
+	g := &Game{
+		meteorSpawnTimer: NewTimer(meteorSpawnTime),
+	}
+
+	g.player = NewPlayer(g)
+
+	return g
 }
 
 func (g *Game) Update() error {
@@ -386,6 +428,7 @@ func (g *Game) Update() error {
 			if m.Collider().Intersects(b.Collider()) {
 				g.meteors = append(g.meteors[:i], g.meteors[i+1:]...)
 				g.bullets = append(g.bullets[:j], g.bullets[j+1:]...)
+				g.score++
 			}
 		}
 	}
@@ -401,7 +444,6 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.player.Draw(screen)
 
 	for _, m := range g.meteors {
 		m.Draw(screen)
@@ -410,6 +452,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, b := range g.bullets {
 		b.Draw(screen)
 	}
+
+	g.player.Draw(screen)
+
+	text.Draw(screen, fmt.Sprintf("%06d", g.score), ScoreFont, ScreenWidth/2-100, 50, color.White)
 }
 
 func (g *Game) AddBullet(b *Bullet) {
@@ -419,6 +465,7 @@ func (g *Game) Reset() {
 	g.player = NewPlayer(g)
 	g.meteors = nil
 	g.bullets = nil
+	g.score = 0
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -460,11 +507,7 @@ func (t *Timer) Reset() {
 // ------------------------------------------------------
 
 func main() {
-	g := &Game{
-		meteorSpawnTimer: NewTimer(20),
-	}
-
-	g.player = NewPlayer(g)
+	g := NewGame()
 
 	err := ebiten.RunGame(g)
 	if err != nil {
